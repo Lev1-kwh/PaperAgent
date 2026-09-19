@@ -1,6 +1,7 @@
 from app.models.paper import PaperResponse,PaperCreate,PaperUploadResponse
 from fastapi import APIRouter,UploadFile,File,HTTPException
 import os,uuid,pymupdf
+from app.services.text_service import  clean_text
 router = APIRouter(prefix="/papers")
 @router.post("",
              response_model=PaperResponse,
@@ -28,6 +29,12 @@ async def  uploads_paper(file:UploadFile = File(...)):
     text = ""
     for page in pdf:
         text+=page.get_text()
+    print("U+FFFE数量"+text.count("\ufffe"))
+    cleaned_text = clean_text(text)
+    cleaned_text= cleaned_text.replace("\ufffe","")
+    print("原始长度：",len(text))
+    print("清洗后长度：",len(cleaned_text))
+        #print(cleaned_text)
     response = PaperUploadResponse(message="上传成功",
                                    filename=filename,
                                    text_length=len(text),)
