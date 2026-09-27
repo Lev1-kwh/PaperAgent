@@ -10,3 +10,4 @@ class PaperUploadResponse(BaseModel):
     message: str
     filename: str
     text_length: int
+    chunk_count: int
