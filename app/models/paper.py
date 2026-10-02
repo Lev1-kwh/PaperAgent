@@ -11,3 +11,12 @@ class PaperUploadResponse(BaseModel):
     filename: str
     text_length: int
     chunk_count: int
+class Question(BaseModel):
+    question: str
+class PaperSource(BaseModel):
+    chunk_id : int
+    pages : list[int]
+    distance : float
+class PaperAskResponse(BaseModel):
+ answer: str
+ sources: list[PaperSource]

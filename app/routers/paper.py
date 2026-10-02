@@ -1,8 +1,10 @@
 from app.models.paper import PaperResponse,PaperCreate,PaperUploadResponse
+from app.models.paper import PaperSource,PaperAskResponse,Question
 from fastapi import APIRouter,UploadFile,File,HTTPException
 import os,uuid,pymupdf
 from app.services.text_service import  clean_text,split_paragraphs
 from app.services.chunk_service import chunk_paragraphs
+from app.services.rag_service import  ask_paper
 router = APIRouter(prefix="/papers")
 @router.post("",
              response_model=PaperResponse,
@@ -48,3 +50,21 @@ async def  uploads_paper(file:UploadFile = File(...)):
     for chunk in chunks:
         print(chunk.chunk_id,len(chunk.text))
     return response
+@router.post(
+    "/ask",
+    response_model=PaperAskResponse,
+    status_code=200
+)
+def ask_paper_endpoint(question:Question):
+    if not question.question.strip():
+        raise HTTPException(status_code=400,
+                            detail="问题不能为空")
+    try:
+        result = ask_paper(question.question)
+    except Exception as e:
+        raise HTTPException(status_code=500,
+                                        detail=f"论文问答失败{str(e)}")
+    response = PaperAskResponse(answer=result["answer"],
+                                sources = result["sources"])
+    return response
+

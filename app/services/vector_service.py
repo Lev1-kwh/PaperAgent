@@ -1,14 +1,23 @@
 import chromadb
+
 from app.models.chunk import Chunk
+from app.services.embedding_service import embed_chunks,embed_text
+#新建一个客户端通过客户端操作向量数据库，Persistent代表数据库中的数据会存放到硬盘中
 client = chromadb.PersistentClient(path="./chroma_db")
+#打开已有表或创建新表，表名为papers
 collection = client.get_or_create_collection(name="papers")
+#给表加字段以及数据
 def add_chunks(chunks,vectors):
     collection.add(
+        #id字段：存放id列表，字符串类型
         ids=[str(chunk.chunk_id) for chunk in chunks],
+        #document：存放chunks的文本内容列表
         documents= [chunk.text for chunk in chunks],
+        #embedding：存放切分好的向量列表
         embeddings=vectors.tolist(),
         #[{}]列表里面装字典
         #[]:一堆东西。{}:一段东西里面的详细属性
+        #metadatas：存放数据的其他附带信息如chunk的id以及所属的页码
         metadatas=[
             {
                 "chunk_id": chunk.chunk_id,
@@ -18,3 +27,22 @@ def add_chunks(chunks,vectors):
         for chunk in chunks
         ]
     )
+def search_chunks(query_vector,top_k=3):
+    results = collection.query(
+        query_embeddings= [query_vector.tolist()],
+        n_results= top_k
+        )
+    documents = results["documents"][0]
+    metadatas = results["metadatas"][0]
+    distances = results["distances"][0]
+    chunks=[]
+    for i in range(len(documents)):
+        chunks.append(
+            Chunk(
+                chunk_id=metadatas[i]["chunk_id"],
+                pages = [int(page) for page in metadatas[i]["pages"].split(",")],
+                text=documents[i],
+                distance=distances[i]
+            )
+        )
+    return chunks
