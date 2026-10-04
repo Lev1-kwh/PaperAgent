@@ -1,19 +1,18 @@
-from app.models import chunk
 from app.services.embedding_service import embed_text
 from app.services.llm_service import ask_llm
 from app.services.vector_service import search_chunks
 
-
-def ask_paper(question):
+def ask_paper(paper_id,question):
     query_vector = embed_text(question)
-    chunks = search_chunks(query_vector)
+    chunks = search_chunks(query_vector,paper_id)
     context = build_context(chunks)
     prompt = build_prompt(context,question)
     answer = ask_llm(prompt)
     sources = [
-        {"chunk_id":chunk.chunk_id,
-         "pages":chunk.pages,
-         "distance":chunk.distance}
+        {"paper_id": chunk.paper_id,
+            "chunk_id":chunk.chunk_id,
+            "pages":chunk.pages,
+            "distance":chunk.distance}
         for chunk in chunks
     ]
     return {

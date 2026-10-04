@@ -3,16 +3,17 @@
 from app.models.chunk import  Chunk
 
 
-def split_long_paragraph(paragraph, chunk_size):
+def split_long_paragraph(paragraph, chunk_size,paper_id):
     #创建空列表用于存储切分好的短段落
     chunks = []
     #对目标长段落进行遍历，下标每次跳跃chunk_size,然后再切分为长度为chunk_size的字符串
     for i in range(0, len(paragraph.text),chunk_size ):
         chunks.append(Chunk(chunk_id = i,
+                            paper_id = paper_id,
                             text = paragraph.text[i:i+chunk_size],
                       pages = paragraph.pages))
     return chunks
-def chunk_paragraphs(paragraphs, chunk_size,):
+def chunk_paragraphs(paragraphs, chunk_size,paper_id):
     #新建空列表用于存储chunk
     chunk_list =[]
     #空字符串临时容器用于判断当前容量是否能够装下一个段落
@@ -28,13 +29,14 @@ def chunk_paragraphs(paragraphs, chunk_size,):
             if current_chunk :
                 chunk_list.append(Chunk(
                     chunk_id = -1,
+                    paper_id = paper_id,
                     text = current_chunk,
                     pages = list(set(current_pages))
                 ))
                 current_chunk =""
                 current_pages=[]
             ##对超长段落进行切分
-            split_chunks =   split_long_paragraph(paragraph,chunk_size)
+            split_chunks =   split_long_paragraph(paragraph,chunk_size,paper_id)
             chunk_list.extend(split_chunks)
         #chunk_list.extend(split_p)等价于for chunk in split_p...
         #短段落情况
@@ -59,6 +61,7 @@ def chunk_paragraphs(paragraphs, chunk_size,):
                 # 先保存旧chunk
                 chunk_list.append(Chunk(
                     chunk_id = -1,
+                    paper_id = paper_id,
                     text = current_chunk,
                     pages = list(set(current_pages))
                 ))
@@ -71,6 +74,7 @@ def chunk_paragraphs(paragraphs, chunk_size,):
             chunk_list.append(
                 Chunk(
                     chunk_id = -1,
+                    paper_id = paper_id,
                     text = current_chunk,
                     pages = list(set(current_pages))
                 ))

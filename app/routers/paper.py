@@ -4,6 +4,8 @@ from fastapi import APIRouter,UploadFile,File,HTTPException
 import os,uuid,pymupdf
 from app.services.text_service import  clean_text,split_paragraphs
 from app.services.chunk_service import chunk_paragraphs
+from app.services.embedding_service import embed_chunks
+from app.services.vector_service import add_chunks
 from app.services.rag_service import  ask_paper
 router = APIRouter(prefix="/papers")
 @router.post("",
@@ -39,16 +41,15 @@ async def  uploads_paper(file:UploadFile = File(...)):
         #也就是第a+1个元组，表示这个元组中的第一个元素，对应上面就是页码。
         #若为[a][1]表示第a+1个元组中的第二个元素，也就是文本内容
     text_length = total_text_length
-    chunks = chunk_paragraphs(paragraphs,1000)
+    paper_id = str(uuid.uuid4())
+    chunks = chunk_paragraphs(paragraphs,1000,paper_id)
+    vectors = embed_chunks(chunks)
+    add_chunks(chunks,vectors)
     response = PaperUploadResponse(message="上传成功",
+                                   paper_id=paper_id,
                                    filename=filename,
                                    text_length=text_length,
                                    chunk_count=len(chunks))
-    for paragraph in paragraphs:
-        print(paragraph)
-        print("//////////////////////////")
-    for chunk in chunks:
-        print(chunk.chunk_id,len(chunk.text))
     return response
 @router.post(
     "/ask",
@@ -60,7 +61,7 @@ def ask_paper_endpoint(question:Question):
         raise HTTPException(status_code=400,
                             detail="问题不能为空")
     try:
-        result = ask_paper(question.question)
+        result = ask_paper(question.paper_id,question.question)
     except Exception as e:
         raise HTTPException(status_code=500,
                                         detail=f"论文问答失败{str(e)}")
