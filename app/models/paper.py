@@ -11,6 +11,8 @@ class PaperUploadResponse(BaseModel):
     paper_id: str
     message: str
     filename: str
+    title: str
+    author: str
     text_length: int
     chunk_count: int
 class Question(BaseModel):
