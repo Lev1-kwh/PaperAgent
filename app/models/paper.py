@@ -1,10 +1,6 @@
+from datetime import datetime
 from pydantic import BaseModel
 class PaperCreate(BaseModel):
-    title: str
-    author: str
-class PaperResponse(BaseModel):
-    paper_id:str
-    message: str
     title: str
     author: str
 class PaperUploadResponse(BaseModel):
@@ -26,3 +22,13 @@ class PaperSource(BaseModel):
 class PaperAskResponse(BaseModel):
  answer: str
  sources: list[PaperSource]
+class PaperResponse(BaseModel):
+     paper_id: str
+     title: str
+     author: str
+     filename: str
+     created_at: datetime
+     #Pydantic允许从Paper对象属性读取数据，生成Response Model。
+     class Config:
+        from_attributes= True
+

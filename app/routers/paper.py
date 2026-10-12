@@ -1,5 +1,9 @@
-from app.models.paper import PaperResponse,PaperCreate,PaperUploadResponse
-from app.models.paper import PaperSource,PaperAskResponse,Question
+from app.models.paper import (
+PaperResponse,
+PaperUploadResponse,
+PaperAskResponse,
+Question,
+)
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 import os,uuid,pymupdf
 from app.services.text_service import  clean_text,split_paragraphs
@@ -8,17 +12,12 @@ from app.services.embedding_service import embed_chunks
 from app.services.vector_service import add_chunks
 from app.services.rag_service import  ask_paper
 from app.database.database import SessionLocal
-from app.database.paper import Paper
 from sqlalchemy import select
+from typing import List
+from app.services.paper_service import get_all_papers
+from app.database.paper import Paper
 router = APIRouter(prefix="/papers")
-@router.post("",
-             response_model=PaperResponse,
-             status_code=201)
-def create_paper(paper:PaperCreate):
-   response = PaperResponse(message="paper created",
-                            title=paper.title,
-                            author=paper.author)
-   return response
+
 @router.post(
     "/upload",
              response_model=PaperUploadResponse,
@@ -107,4 +106,12 @@ def ask_paper_endpoint(question:Question):
     response = PaperAskResponse(answer=result["answer"],
                                 sources = result["sources"])
     return response
+@router.get(
+    "",
+    response_model=List[PaperResponse],
+    status_code=200
+)
+def list_papers():
+    papers = get_all_papers()
+    return papers
 
