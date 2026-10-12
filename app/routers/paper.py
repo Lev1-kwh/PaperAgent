@@ -14,8 +14,9 @@ from app.services.rag_service import  ask_paper
 from app.database.database import SessionLocal
 from sqlalchemy import select
 from typing import List
-from app.services.paper_service import get_all_papers
+from app.services.paper_service import get_all_papers,get_paper_by_id
 from app.database.paper import Paper
+
 router = APIRouter(prefix="/papers")
 
 @router.post(
@@ -114,4 +115,17 @@ def ask_paper_endpoint(question:Question):
 def list_papers():
     papers = get_all_papers()
     return papers
+@router.get(
+    "/{paper_id}",
+    response_model=PaperResponse,
+    status_code=200
+)
+def show_paper(paper_id: str):
+    paper = get_paper_by_id(paper_id)
+    if paper is None:
+        raise HTTPException(
+            status_code=404,
+        detail="Paper not found")
+    return paper
+
 
