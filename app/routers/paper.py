@@ -1,8 +1,8 @@
 from app.models.paper import (
-PaperResponse,
-PaperUploadResponse,
-PaperAskResponse,
-Question,
+    PaperResponse,
+    PaperUploadResponse,
+    PaperAskResponse,
+    Question, PaperDeleteResponse,
 )
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 import os,uuid,pymupdf
@@ -14,7 +14,9 @@ from app.services.rag_service import  ask_paper
 from app.database.database import SessionLocal
 from sqlalchemy import select
 from typing import List
-from app.services.paper_service import get_all_papers,get_paper_by_id
+from app.services.paper_service import(
+get_paper_by_id,get_all_papers,delete_paper
+)
 from app.database.paper import Paper
 
 router = APIRouter(prefix="/papers")
@@ -115,6 +117,8 @@ def ask_paper_endpoint(question:Question):
 def list_papers():
     papers = get_all_papers()
     return papers
+
+
 @router.get(
     "/{paper_id}",
     response_model=PaperResponse,
@@ -127,5 +131,29 @@ def show_paper(paper_id: str):
             status_code=404,
         detail="Paper not found")
     return paper
+@router.delete(
+    "/{paper_id}",
+    response_model=PaperDeleteResponse,
+status_code=200
+)
+def delete_paper_endpoint(paper_id: str):
+    try:
+        result = delete_paper(paper_id)
+        if result is False:
+            raise HTTPException(
+            status_code=404,
+            detail="Paper not found"
+             )
+    except HTTPException:
+        raise
+    except Exception :
+        raise HTTPException(
+            status_code=500,
+             detail="Delete failed")
+
+    return PaperDeleteResponse(
+        paper_id=paper_id,
+        message="Paper deleted"
+    )
 
 

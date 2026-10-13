@@ -31,4 +31,7 @@ class PaperResponse(BaseModel):
      #Pydantic允许从Paper对象属性读取数据，生成Response Model。
      class Config:
         from_attributes= True
+class PaperDeleteResponse(BaseModel):
+    paper_id: str
+    message: str
 
