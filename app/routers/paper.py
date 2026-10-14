@@ -1,3 +1,5 @@
+import traceback,logging
+
 from app.models.paper import (
     PaperResponse,
     PaperUploadResponse,
@@ -9,7 +11,7 @@ import os,uuid,pymupdf
 from app.services.text_service import  clean_text,split_paragraphs
 from app.services.chunk_service import chunk_paragraphs
 from app.services.embedding_service import embed_chunks
-from app.services.vector_service import add_chunks
+from app.services.vector_service import add_chunks,delete_chunks
 from app.services.rag_service import  ask_paper
 from app.database.database import SessionLocal
 from sqlalchemy import select
@@ -20,6 +22,7 @@ get_paper_by_id,get_all_papers,delete_paper
 from app.database.paper import Paper
 
 router = APIRouter(prefix="/papers")
+logger = logging.getLogger(__name__)
 
 @router.post(
     "/upload",
@@ -65,6 +68,13 @@ async def  uploads_paper(file:UploadFile = File(...),
         session.commit()
     except Exception:
         session.rollback()
+        try:
+            delete_chunks(paper_id)
+        except Exception:
+            logger.exception(
+                "Failed to compensate Chroma chunks for paper_id = %s",
+                paper_id
+            )
         raise
     finally:
         session.close()

@@ -27,6 +27,11 @@ def add_chunks(chunks,vectors):
         for chunk in chunks
         ]
     )
+def delete_chunks(paper_id):
+    collection.delete(where={
+        "paper_id":paper_id,
+    })
+
 def search_chunks(query_vector,paper_id,top_k=3):
     results = collection.query(
         query_embeddings= [query_vector.tolist()],
