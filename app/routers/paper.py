@@ -1,4 +1,6 @@
-import traceback,logging
+import logging
+
+from sqlalchemy.orm import session
 
 from app.models.paper import (
     PaperResponse,
@@ -26,65 +28,121 @@ logger = logging.getLogger(__name__)
 
 @router.post(
     "/upload",
-             response_model=PaperUploadResponse,
-             status_code=201)
-async def  uploads_paper(file:UploadFile = File(...),
-                         title:str=Form(...),
-                         author:str=Form(...),):
+    response_model=PaperUploadResponse,
+    status_code=201
+)
+async def uploads_paper(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    author: str = Form(...)
+):
     content = await file.read()
     filename = file.filename
     extension = os.path.splitext(filename)[1].lower()
-    if extension!= ".pdf":
-        raise HTTPException(status_code=400,
-                            detail="只允许上传pdf文件")
-    unique_filename = str(uuid.uuid4()) + extension
-    path = os.path.join("uploads", unique_filename)
-    with open(path,"wb") as f: f.write(content)
-    pdf = pymupdf.open(path)
-    total_text_length  = 0
-    paragraphs=[]
-    for page_number, page in enumerate(pdf,start=1):
-        cleaned_page_text = clean_text(page.get_text())
-        total_text_length += len(cleaned_page_text)
-        paragraphs.extend(split_paragraphs(cleaned_page_text, page_number))
-        #pages[a][0]中示pages列表中第a+1个元素，
-        #也就是第a+1个元组，表示这个元组中的第一个元素，对应上面就是页码。
-        #若为[a][1]表示第a+1个元组中的第二个元素，也就是文本内容
 
-    text_length = total_text_length
-    paper_id = str(uuid.uuid4())
-    chunks = chunk_paragraphs(paragraphs,1000,paper_id)
-    vectors = embed_chunks(chunks)
-    add_chunks(chunks,vectors)
-    session = SessionLocal()
-    try:
-        paper_record = Paper(
-            paper_id = paper_id,
-            title = title,
-            author = author,
-            filename = filename
+    if extension != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="只允许上传pdf文件"
         )
-        session.add(paper_record)
-        session.commit()
+
+    unique_filename = str(uuid.uuid4()) + extension
+    upload_dir = os.path.abspath("uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    path = os.path.join(upload_dir, unique_filename)
+
+    paper_id = str(uuid.uuid4())
+    chroma_saved = False
+
+    with open(path, "wb") as f:
+        f.write(content)
+    session = None
+
+
+    try:
+        session = SessionLocal()
+        # 使用 with 语句块管理 pdf 文档的生命周期
+        with pymupdf.open(path) as pdf:
+            total_text_length = 0
+            paragraphs = []
+
+            for page_number, page in enumerate(pdf, start=1):
+                cleaned_page_text = clean_text(page.get_text())
+                total_text_length += len(cleaned_page_text)
+                paragraphs.extend(
+                    split_paragraphs(cleaned_page_text, page_number)
+                )
+
+                # pages[a][0] 中示例：pages 列表中第 a+1 个元素，
+                # 也就是第 a+1 个元组，表示这个元组中的第一个元素，对应上面就是页码。
+                # 若为 [a][1]，表示第 a+1 个元组中的第二个元素，也就是文本内容。
+
+        text_length = total_text_length
+
+        chunks = chunk_paragraphs(paragraphs, 1000, paper_id)
+        vectors = embed_chunks(chunks)
+        add_chunks(chunks, vectors)
+        chroma_saved = True
+
+        paper_record = Paper(
+            paper_id=paper_id,
+            title=title,
+            author=author,
+            filename=filename
+        )
+
+        try:
+            session.add(paper_record)
+            session.commit()
+        except Exception:
+            try:
+                session.rollback()
+            except Exception:
+                logger.exception(
+                    "Fail to rollback paper %s", paper_id
+                )
+
+            if chroma_saved:
+                try:
+                    delete_chunks(paper_id)
+                except Exception:
+                    logger.exception(
+                        "Failed to compensate Chroma chunks for paper_id = %s",
+                        paper_id
+                    )
+
+            raise
+
     except Exception:
-        session.rollback()
         try:
             delete_chunks(paper_id)
         except Exception:
             logger.exception(
                 "Failed to compensate Chroma chunks for paper_id = %s",
-                paper_id
+            )
+        try:
+            os.remove(path)
+        except Exception:
+            logger.exception(
+                "Failed to delete paper %s", paper_id
             )
         raise
+
     finally:
-        session.close()
-    response = PaperUploadResponse(message="上传成功",
-                                   paper_id=paper_id,
-                                   filename=filename,
-                                   title =title,
-                                   author =author,
-                                   text_length=text_length,
-                                   chunk_count=len(chunks))
+        if session is not None:
+            session.close()
+
+
+    response = PaperUploadResponse(
+        message="上传成功",
+        paper_id=paper_id,
+        filename=filename,
+        title=title,
+        author=author,
+        text_length=text_length,
+        chunk_count=len(chunks)
+    )
+
     return response
 @router.post(
     "/ask",
