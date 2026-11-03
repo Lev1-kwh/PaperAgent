@@ -24,6 +24,9 @@ get_paper_by_id,get_all_papers,delete_paper
 from app.database.paper import Paper
 
 router = APIRouter(prefix="/papers")
+# 获取当前模块对应的日志记录器，
+# 用于记录程序运行过程中的信息和异常
+
 logger = logging.getLogger(__name__)
 
 @router.post(
@@ -47,12 +50,18 @@ async def uploads_paper(
         )
 
     unique_filename = str(uuid.uuid4()) + extension
+    # 获取 uploads 目录的绝对路径
+    # os.path.abspath() 会根据当前工作目录解析相对路径,
+    # 将相对路径转换为绝对路径
     upload_dir = os.path.abspath("uploads")
+    # 如果 uploads 目录不存在，就自动创建
+    # exist_ok=True 表示目录已经存在时不报错
     os.makedirs(upload_dir, exist_ok=True)
+    # 拼接上传目录和文件名，得到完整的文件路径
     path = os.path.join(upload_dir, unique_filename)
 
     paper_id = str(uuid.uuid4())
-    chroma_saved = False
+
 
     with open(path, "wb") as f:
         f.write(content)
@@ -82,7 +91,6 @@ async def uploads_paper(
         chunks = chunk_paragraphs(paragraphs, 1000, paper_id)
         vectors = embed_chunks(chunks)
         add_chunks(chunks, vectors)
-        chroma_saved = True
 
         paper_record = Paper(
             paper_id=paper_id,
@@ -101,15 +109,6 @@ async def uploads_paper(
                 logger.exception(
                     "Fail to rollback paper %s", paper_id
                 )
-
-            if chroma_saved:
-                try:
-                    delete_chunks(paper_id)
-                except Exception:
-                    logger.exception(
-                        "Failed to compensate Chroma chunks for paper_id = %s",
-                        paper_id
-                    )
 
             raise
 
