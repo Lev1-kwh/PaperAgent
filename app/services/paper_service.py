@@ -1,10 +1,10 @@
 from sqlalchemy import select
 from app.database.database import SessionLocal
 from app.database.paper import Paper
-import chromadb
+import chromadb,os
 
 
-
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def get_all_papers():
     session = SessionLocal()
     try:
@@ -30,9 +30,10 @@ def get_paper_by_id(paper_id):
     finally:
         session.close()
 def delete_paper(paper_id):
+
     session = SessionLocal()
     client = chromadb.PersistentClient(
-        path="./chroma_db"
+        path=os.path.join(BASE_DIR, 'chroma_db')
     )
     collection = client.get_collection(name="papers")
     try:

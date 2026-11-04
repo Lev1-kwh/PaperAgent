@@ -1,8 +1,9 @@
-import chromadb
+import chromadb,os
 from app.models.chunk import Chunk
 
 #新建一个客户端通过客户端操作向量数据库，Persistent代表数据库中的数据会存放到硬盘中
-client = chromadb.PersistentClient(path="./chroma_db")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+client = chromadb.PersistentClient(path=os.path.join(BASE_DIR, 'chroma_db'))
 #打开已有表或创建新表，表名为papers
 collection = client.get_or_create_collection(name="papers")
 #给表加字段以及数据

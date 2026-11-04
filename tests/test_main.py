@@ -104,7 +104,7 @@ def test_upload_success(tmp_path):
    # 也就是可以调用add(),commit()等方法但是不会真的访问数据库
 
    mock_session = MagicMock(spec=Session)
-   with patch("app.routers.paper.os.path.abspath",return_value=str(tmp_path)):
+   with patch("app.routers.paper.BASE_DIR", str(tmp_path)):
       with patch("app.routers.paper.SessionLocal",return_value=mock_session):
          #chunk_paragraphs模拟返回一个文本列表
          with patch("app.routers.paper.chunk_paragraphs",return_value = ["mock chunk"]):
@@ -168,7 +168,7 @@ def test_upload_chroma_failure(tmp_path):
     pdf_bytes = doc.tobytes()
     doc.close()
     mock_session = MagicMock(spec=Session)
-    with patch("app.routers.paper.os.path.abspath",return_value=str(tmp_path)):
+    with patch("app.routers.paper.BASE_DIR", str(tmp_path)):
         with patch("app.routers.paper.SessionLocal", return_value=mock_session):
             with patch("app.routers.paper.chunk_paragraphs", return_value=["mock chunk"]):
                 with patch("app.routers.paper.embed_chunks", return_value=[[0.1, 0.2]]):

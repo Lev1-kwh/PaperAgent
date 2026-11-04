@@ -24,6 +24,26 @@ get_paper_by_id,get_all_papers,delete_paper
 from app.database.paper import Paper
 
 router = APIRouter(prefix="/papers")
+'''第 1 步 __file__：Python 给每个 .py 文件自带的模块级变量，
+值是这个文件自己的路径。
+它不是你定义的——解释器加载模块时自动塞进去的。
+关键是它的参照物：文件自身物理位置，
+和你在哪个目录敲命令无关。
+
+第 2 步 os.path.abspath(__file__)：转成绝对路径。
+这是个防御性包装——历史原因，
+被直接执行的脚本（python xxx.py 那个入口文件）的 __file__ 可能是相对路径（取决于你怎么敲的命令），
+被 import 的模块则一定是绝对的。
+包一层 abspath，两种情况都稳，成本为零。
+第 3 步 三层 dirname：每层砍掉路径最后一节：
+数层数的方法就是从文件位置往上走，
+走到你想要的那级为止。database.py 只要到 app 所以是 2 次，三个 service/router 文件要到项目根所以是 3 次——这就是为什么大家次数不一样。
+
+第 4 步 os.path.join(BASE_DIR, 'chroma_db')：拼接。
+Windows 上写 BASE_DIR + '\chroma_db' 碰巧也能跑，
+但 join 换到 Linux/Mac（\ 换 /）也不出错
+'''
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 获取当前模块对应的日志记录器，
 # 用于记录程序运行过程中的信息和异常
 
@@ -50,10 +70,9 @@ async def uploads_paper(
         )
 
     unique_filename = str(uuid.uuid4()) + extension
-    # 获取 uploads 目录的绝对路径
-    # os.path.abspath() 会根据当前工作目录解析相对路径,
-    # 将相对路径转换为绝对路径
-    upload_dir = os.path.abspath("uploads")
+    # BASE_DIR 在模块顶部用 __file__ 锚定项目根目录，
+    # uploads 目录固定落在项目根下，不受启动目录（CWD）影响
+    upload_dir = os.path.join(BASE_DIR, "uploads")
     # 如果 uploads 目录不存在，就自动创建
     # exist_ok=True 表示目录已经存在时不报错
     os.makedirs(upload_dir, exist_ok=True)
